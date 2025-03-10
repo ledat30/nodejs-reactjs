@@ -79,4 +79,32 @@ async function callBitrixApi(action, payload = {}) {
   }
 }
 
+function startTokenRefreshScheduler() {
+  const INTERVAL = 30 * 60 * 1000; // 30 phút
+  const BUFFER_TIME = 5 * 60 * 1000; // Làm mới trước khi hết hạn 5 phút
+
+  setInterval(async () => {
+    try {
+      const token = await loadTokens();
+      if (!token) {
+        console.log('No token available to refresh yet.');
+        return;
+      }
+
+      const timeLeft = token.expires_at - Date.now();
+      if (timeLeft <= BUFFER_TIME) {
+        console.log('Token nearing expiry, refreshing...');
+        await refreshToken(token.refresh_token);
+        console.log('Token refreshed successfully.');
+      } else {
+        console.log('Token still valid, no refresh needed.');
+      }
+    } catch (error) {
+      console.error('Error in token refresh scheduler:', error.message);
+    }
+  }, INTERVAL);
+}
+
+startTokenRefreshScheduler();
+
 module.exports = { saveTokens, callBitrixApi };

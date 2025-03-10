@@ -1,4 +1,5 @@
 const bitrixService = require('../service/OAuthService');
+const InstallEvent = require('../models/Install');
 const axios = require('axios');
 
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -39,8 +40,27 @@ const handleAuthCallback = async (req, res) => {
 // Xử lý sự kiện Install App
 const handleInstallEvent = async (req, res) => {
   const { auth, application_token } = req.body;
-  console.log('App installed:', { auth, application_token });
-  res.send('OK');
+
+  try {
+    const existingInstall = await InstallEvent.findOne({ application_token });
+
+    let isFirstInstall = false;
+    if (!existingInstall) {
+      isFirstInstall = true;
+    }
+
+    const installEvent = new InstallEvent({
+      application_token,
+      installed_at: new Date(),
+      is_first_install: isFirstInstall,
+    });
+    await installEvent.save();
+
+    res.send('OK');
+  } catch (error) {
+    console.error('Error handling install event:', error.message);
+    res.status(500).send('Failed to process install event');
+  }
 };
 
 module.exports = { handleAuthCallback, handleInstallEvent, getContacts };
